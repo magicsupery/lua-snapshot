@@ -6,7 +6,7 @@ local function cleanup_key_value(input)
     local ret = {}
     for k, v in pairs(input) do
         local key = tostring(k)
-        local clean_key = key:gmatch("userdata: 0x(%w+)")()
+        local clean_key = key:gmatch("userdata: (%w+)")()
         local val_type
         if v:find("^table") then
             val_type = "table"
@@ -17,8 +17,8 @@ local function cleanup_key_value(input)
         else
             val_type = "userdata"
         end
-        local parent = v:match("0x(%w+) :")
-        local _, finish = v:find("0x(%w+) : ")
+        local parent = v:match("(%w+) :")
+        local _, finish = v:find("(%w+) : ")
         local extra = v:sub(finish + 1, #v)
         local val_key = extra:match("(%w+) :")
         local trim_extra = trim(extra)
@@ -122,12 +122,56 @@ local function cleanup_forest(input)
     return _clean(input)
 end
 
+local print = print
+local tconcat = table.concat
+local tinsert = table.insert
+local srep = string.rep
+local type = type
+local pairs = pairs
+local tostring = tostring
+local next = next
+
+local function show(root)
+	local cache = {  [root] = "." }
+	local function _dump(t,space,name)
+		local temp = {}
+		for k,v in pairs(t) do
+			local key = tostring(k)
+			if cache[v] then
+				tinsert(temp,"+" .. key .. " {" .. cache[v].."}")
+			elseif type(v) == "table" then
+				local new_key = name .. "." .. key
+				cache[v] = new_key
+				tinsert(temp,"+" .. key .. _dump(v,space .. (next(t,k) and "|" or " " ).. srep(" ",#key),new_key))
+			else
+				tinsert(temp,"+" .. key .. " [" .. tostring(v).."]")
+			end
+		end
+		return tconcat(temp,"\n"..space)
+	end
+	print(_dump(root, "",""))
+end
+
 local M = {}
-function M.construct_indentation(input_diff)
-    local clean_diff = cleanup_key_value(input_diff)
+
+function M.show_diff(s1, s2)
+	local input_diff = {}
+	for k,v in pairs(s2) do
+		if not s1[k] then
+			input_diff[k] = v
+		end
+	end
+	print("===================INPUTDIFF SHOW==========================")
+	show(input_diff)
+	
+	local clean_diff = cleanup_key_value(input_diff)
     local forest = reduce(clean_diff)
     cleanup_forest(forest)
-    return forest
+	print("===================FOREST SHOW==========================")
+	show(forest)
+	
+	
 end
+
 
 return M

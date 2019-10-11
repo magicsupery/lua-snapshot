@@ -1,7 +1,6 @@
 local snapshot = require "snapshot"
 local snapshot_utils = require "snapshot_utils"
-local construct_indentation = snapshot_utils.construct_indentation
-local print_r = require "print_r"
+local show_diff = snapshot_utils.show_diff
 
 local S1 = snapshot()
 
@@ -36,16 +35,4 @@ local co = coroutine.create(function ()
 end)
 
 local S2 = snapshot()
-
-local diff = {}
-for k,v in pairs(S2) do
-	if not S1[k] then
-        diff[k] = v
-	end
-end
-
-print_r(diff)
-print("===========================")
-
-local result = construct_indentation(diff)
-print_r(result)
+show_diff(S1, S2)
